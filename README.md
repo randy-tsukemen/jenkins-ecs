@@ -34,6 +34,17 @@ The architecture's ability to handle 1000 concurrent jobs is supported by:
 
 For detailed capacity analysis and evidence, see the "Evidence Supporting 1000 Concurrent Jobs" section in the deployment guide.
 
+## Scalability Demonstration
+
+For teams who want to validate the scaling capabilities of this architecture, we've provided a detailed demonstration guide that walks through:
+
+- Setting up test jobs to simulate concurrent workloads
+- Observing real-time auto-scaling of ECS agents
+- Measuring scale-up and scale-down performance
+- Extrapolating results to 1000-job capacity
+
+Follow the instructions in `SCALABILITY-DEMONSTRATION-GUIDE.md` to run a controlled test with 100 concurrent jobs and observe the system's scaling behavior. The guide includes monitoring tools, test job scripts, and analysis methods.
+
 ## Batch Workload Optimization
 
 **New**: For organizations running large-scale tests periodically (e.g., 10 times per week) with minimal usage during other periods, see `COST-OPTIMIZATION-FOR-BATCH-WORKLOADS.md` for:
@@ -51,6 +62,8 @@ This optimized approach can reduce costs by up to 87% compared to longer test ru
 
 - `JENKINS-ECS-DEPLOYMENT-GUIDE.md`: Comprehensive guide with best practices
 - `COST-OPTIMIZATION-FOR-BATCH-WORKLOADS.md`: Guidance for periodic high-scale testing
+- `SCALABILITY-DEMONSTRATION-GUIDE.md`: Step-by-step guide for testing scalability
+- `scaling-dashboard.json`: CloudWatch dashboard for monitoring scaling
 - `jenkins-controller-service.yaml`: CloudFormation template for Jenkins controller
 - `jenkins-agent-cluster.yaml`: CloudFormation template for agent clusters
 - `deploy.sh`: Deployment script to simplify installation

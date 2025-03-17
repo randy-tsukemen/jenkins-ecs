@@ -1,0 +1,298 @@
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "AWS/ECS",
+            "CPUUtilization",
+            "ServiceName",
+            "jenkins-agent-small",
+            "ClusterName",
+            "jenkins-agent-cluster",
+            { "label": "Small Agents CPU" }
+          ],
+          [
+            ".",
+            ".",
+            ".",
+            "jenkins-agent-medium",
+            ".",
+            ".",
+            { "label": "Medium Agents CPU" }
+          ],
+          [
+            ".",
+            ".",
+            ".",
+            "jenkins-agent-large",
+            ".",
+            ".",
+            { "label": "Large Agents CPU" }
+          ],
+          [
+            ".",
+            ".",
+            ".",
+            "jenkins-controller",
+            "ClusterName",
+            "jenkins-cluster",
+            { "label": "Controller CPU" }
+          ]
+        ],
+        "region": "us-east-1",
+        "title": "ECS CPU Utilization",
+        "period": 60,
+        "stat": "Average",
+        "yAxis": {
+          "left": {
+            "min": 0,
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "AWS/ECS",
+            "MemoryUtilization",
+            "ServiceName",
+            "jenkins-agent-small",
+            "ClusterName",
+            "jenkins-agent-cluster",
+            { "label": "Small Agents Memory" }
+          ],
+          [
+            ".",
+            ".",
+            ".",
+            "jenkins-agent-medium",
+            ".",
+            ".",
+            { "label": "Medium Agents Memory" }
+          ],
+          [
+            ".",
+            ".",
+            ".",
+            "jenkins-agent-large",
+            ".",
+            ".",
+            { "label": "Large Agents Memory" }
+          ],
+          [
+            ".",
+            ".",
+            ".",
+            "jenkins-controller",
+            "ClusterName",
+            "jenkins-cluster",
+            { "label": "Controller Memory" }
+          ]
+        ],
+        "region": "us-east-1",
+        "title": "ECS Memory Utilization",
+        "period": 60,
+        "stat": "Average",
+        "yAxis": {
+          "left": {
+            "min": 0,
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "view": "timeSeries",
+        "stacked": true,
+        "metrics": [
+          ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "jenkins-alb"]
+        ],
+        "region": "us-east-1",
+        "title": "Jenkins ALB Request Count",
+        "period": 60,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "AWS/ECS",
+            "RunningTaskCount",
+            "ClusterName",
+            "jenkins-agent-cluster",
+            "ServiceName",
+            "jenkins-agent-small",
+            { "label": "Small Agents" }
+          ],
+          [
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "jenkins-agent-medium",
+            { "label": "Medium Agents" }
+          ],
+          [
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "jenkins-agent-large",
+            { "label": "Large Agents" }
+          ]
+        ],
+        "region": "us-east-1",
+        "title": "ECS Running Tasks",
+        "period": 60,
+        "stat": "Maximum",
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 12,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "AWS/ECS",
+            "PendingTaskCount",
+            "ClusterName",
+            "jenkins-agent-cluster",
+            { "label": "Pending Tasks" }
+          ]
+        ],
+        "region": "us-east-1",
+        "title": "ECS Pending Tasks",
+        "period": 60,
+        "stat": "Maximum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 12,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "AWS/ECS",
+            "ServiceCount",
+            "ClusterName",
+            "jenkins-agent-cluster",
+            { "label": "Service Count" }
+          ]
+        ],
+        "region": "us-east-1",
+        "title": "ECS Service Count",
+        "period": 60,
+        "stat": "Maximum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 18,
+      "width": 24,
+      "height": 6,
+      "properties": {
+        "view": "timeSeries",
+        "stacked": true,
+        "metrics": [
+          [
+            {
+              "expression": "SUM(METRICS())",
+              "label": "Total Running Tasks",
+              "id": "e1",
+              "region": "us-east-1"
+            }
+          ],
+          [
+            "AWS/ECS",
+            "RunningTaskCount",
+            "ClusterName",
+            "jenkins-agent-cluster",
+            "ServiceName",
+            "jenkins-agent-small",
+            { "id": "m1", "visible": false }
+          ],
+          [
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "jenkins-agent-medium",
+            { "id": "m2", "visible": false }
+          ],
+          [
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "jenkins-agent-large",
+            { "id": "m3", "visible": false }
+          ]
+        ],
+        "region": "us-east-1",
+        "title": "Total Running Tasks",
+        "period": 60
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 24,
+      "width": 24,
+      "height": 3,
+      "properties": {
+        "markdown": "# Jenkins ECS Scaling Demonstration Dashboard\n\nThis dashboard provides real-time metrics for the Jenkins on AWS ECS scaling demonstration. Use this to observe how the ECS cluster scales in response to Jenkins job queue depth.\n\n**Key Metrics to Watch:**\n* ECS Running Tasks: Shows the number of agent tasks scaling up and down\n* ECS Pending Tasks: Indicates tasks waiting to be placed\n* CPU/Memory Utilization: Shows resource usage across agents\n* Total Running Tasks: Aggregate view of all running agent tasks"
+      }
+    }
+  ]
+}
