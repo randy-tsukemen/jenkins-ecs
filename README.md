@@ -11,7 +11,7 @@ The solution consists of:
 - **Networking**: Multi-AZ deployment across public and private subnets
 - **Security**: Least privilege IAM roles and security groups
 
-![Architecture Diagram](https://d2908q01vomqb2.cloudfront.net/7719a1c782a1ba91c031a682a0a2f8658209adbf/2019/10/20/Picture1.png)
+Refer to the `JENKINS-ECS-DEPLOYMENT-GUIDE.md` file for a detailed architecture diagram.
 
 ## Features
 

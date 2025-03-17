@@ -6,7 +6,61 @@ This document outlines best practices for deploying Jenkins on AWS with Amazon E
 
 ## Architecture Overview
 
-![Jenkins ECS Architecture](https://d2908q01vomqb2.cloudfront.net/7719a1c782a1ba91c031a682a0a2f8658209adbf/2019/10/20/Picture1.png)
+```
+                                                   ┌─────────────────┐
+                                                   │ AWS Certificate │
+                                                   │    Manager      │
+                                                   └─────────────────┘
+                                                           │
+                 ┌─────────────────┐                       ▼                           ┌─────────────────┐
+                 │                 │                ┌───────────────┐                  │    CloudWatch   │
+Internet ───────▶│   Application   │                │               │                  │     Metrics     │
+                 │  Load Balancer  │◀───────────────│   Security    │                  │    & Alarms     │
+                 │                 │                │    Groups     │                  └─────────────────┘
+                 └─────────────────┘                │               │                          ▲
+                         │                          └───────────────┘                          │
+                         │                                  ▲                                  │
+                         ▼                                  │                                  │
+                 ┌─────────────────┐                        │                          ┌──────────────┐
+                 │                 │                        │                          │              │
+                 │    Public       │                        │                          │ CloudWatch  │
+                 │    Subnets      │                        │                          │     Logs     │
+                 │                 │                        │                          │              │
+                 └─────────────────┘                        │                          └──────────────┘
+                         │                                  │                                  ▲
+                         │                                  │                                  │
+                         ▼                                  │                                  │
+┌───────────────────────────────────────────────────────────┴──────────────────────────────┐  │
+│                                                                                          │  │
+│                                      Private Subnets                                     │  │
+│                                                                                          │  │
+│   ┌─────────────────┐         ┌───────────────────────────────────────────┐             │  │
+│   │                 │         │                                           │             │  │
+│   │ Jenkins         │         │         ECS Cluster (Fargate)             │             │  │
+│   │ Controller      │         │                                           │             │  │
+│   │ ECS Service     │         │  ┌──────────────┐  ┌──────────────┐       │             │  │
+│   │ (Fargate)       │         │  │ Small Agents │  │ Medium Agents│       │───────────────┘
+│   │                 │◀────────┼─▶│ 2 vCPU/4GB   │  │ 4 vCPU/8GB   │       │             │
+│   └─────────────────┘         │  │ Auto-scaling │  │ Auto-scaling │       │             │
+│           │                   │  └──────────────┘  └──────────────┘       │             │
+│           │                   │                                           │             │
+│           ▼                   │  ┌──────────────┐  ┌──────────────────┐   │             │
+│   ┌─────────────────┐         │  │ Large Agents │  │ Specialized      │   │             │
+│   │                 │         │  │ 8 vCPU/16GB  │  │ GPU Agents       │   │             │
+│   │ Amazon EFS      │         │  │ Auto-scaling │  │ (when required)  │   │             │
+│   │ (Persistent     │         │  └──────────────┘  └──────────────────┘   │             │
+│   │  Storage)       │         │                                           │             │
+│   │                 │         └───────────────────────────────────────────┘             │
+│   └─────────────────┘                                                                   │
+│                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+                                            │
+                                            ▼
+                                    ┌───────────────────┐
+                                    │   AWS Secrets     │
+                                    │    Manager        │
+                                    └───────────────────┘
+```
 
 ### Key Components
 
