@@ -12,6 +12,9 @@ PRIVATE_SUBNETS=""
 SSL_CERT_ARN=""
 MIN_AGENTS=10
 MAX_AGENTS=1000
+BATCH_MODE=false
+SCHEDULE_SCALE=false
+TEST_SCHEDULE=""
 
 # Display help
 function show_help {
@@ -29,9 +32,18 @@ function show_help {
     echo "  -c, --certificate-arn ARN ARN of SSL certificate for HTTPS (required)"
     echo "  --min-agents NUMBER       Minimum number of agent instances (default: 10)"
     echo "  --max-agents NUMBER       Maximum number of agent instances (default: 1000)"
+    echo "  --batch-mode              Enable batch workload optimizations for periodic testing"
+    echo "  --schedule-scale          Enable scheduled scaling (requires --batch-mode)"
+    echo "  --test-schedule SCHEDULE  Cron schedule for test runs, e.g. 'cron(0 9 ? * MON-FRI *)'"
+    echo ""
+    echo "Batch Mode Options:"
+    echo "  When --batch-mode is enabled, the deployment is optimized for periodic testing:"
+    echo "  - Minimum agents are set to 0 by default"
+    echo "  - Spot instance percentage is increased to 90%"
+    echo "  - Scheduled scaling can be configured"
     echo ""
     echo "Example:"
-    echo "  $0 --vpc-id vpc-12345678 --public-subnets subnet-a,subnet-b --private-subnets subnet-c,subnet-d --certificate-arn arn:aws:acm:..."
+    echo "  $0 --vpc-id vpc-12345678 --public-subnets subnet-a,subnet-b --private-subnets subnet-c,subnet-d --certificate-arn arn:aws:acm:... --batch-mode"
 }
 
 # Parse command-line arguments
@@ -74,6 +86,22 @@ while [[ $# -gt 0 ]]; do
             MAX_AGENTS="$2"
             shift 2
             ;;
+        --batch-mode)
+            BATCH_MODE=true
+            # Set default MIN_AGENTS to 0 for batch mode if not explicitly set
+            if [ "$MIN_AGENTS" == "10" ]; then
+                MIN_AGENTS=0
+            fi
+            shift
+            ;;
+        --schedule-scale)
+            SCHEDULE_SCALE=true
+            shift
+            ;;
+        --test-schedule)
+            TEST_SCHEDULE="$2"
+            shift 2
+            ;;
         *)
             echo "Unknown option: $1"
             show_help
@@ -89,9 +117,32 @@ if [ -z "$VPC_ID" ] || [ -z "$PUBLIC_SUBNETS" ] || [ -z "$PRIVATE_SUBNETS" ] || 
     exit 1
 fi
 
+# Validate batch mode options
+if [ "$SCHEDULE_SCALE" == "true" ] && [ "$BATCH_MODE" == "false" ]; then
+    echo "Error: --schedule-scale requires --batch-mode"
+    show_help
+    exit 1
+fi
+
+if [ "$SCHEDULE_SCALE" == "true" ] && [ -z "$TEST_SCHEDULE" ]; then
+    echo "Error: --schedule-scale requires --test-schedule"
+    show_help
+    exit 1
+fi
+
 # Convert comma-separated lists to CloudFormation format
 PUBLIC_SUBNETS_CF=$(echo $PUBLIC_SUBNETS | sed 's/,/ /g')
 PRIVATE_SUBNETS_CF=$(echo $PRIVATE_SUBNETS | sed 's/,/ /g')
+
+# Set deployment mode specific parameters
+SPOT_WEIGHT=3
+ON_DEMAND_WEIGHT=1
+
+if [ "$BATCH_MODE" == "true" ]; then
+    SPOT_WEIGHT=9
+    ON_DEMAND_WEIGHT=1
+    echo "Batch mode enabled: Optimizing for periodic testing"
+fi
 
 echo "========================================"
 echo "Jenkins ECS Deployment"
@@ -104,6 +155,16 @@ echo "Private Subnets: $PRIVATE_SUBNETS"
 echo "SSL Certificate ARN: $SSL_CERT_ARN"
 echo "Min Agents: $MIN_AGENTS"
 echo "Max Agents: $MAX_AGENTS"
+echo "Deployment Mode: $([ "$BATCH_MODE" == "true" ] && echo "Batch Optimized" || echo "Standard")"
+if [ "$BATCH_MODE" == "true" ]; then
+    echo "Spot Instance Ratio: 90% (Spot: $SPOT_WEIGHT, On-Demand: $ON_DEMAND_WEIGHT)"
+    if [ "$SCHEDULE_SCALE" == "true" ]; then
+        echo "Scheduled Scaling: Enabled"
+        echo "Test Schedule: $TEST_SCHEDULE"
+    else
+        echo "Scheduled Scaling: Disabled"
+    fi
+fi
 echo "========================================"
 
 # Confirm deployment
@@ -127,14 +188,21 @@ echo "Secret created: $SECRET_ARN"
 
 # Deploy Jenkins controller
 echo "Deploying Jenkins controller..."
+CONTROLLER_PARAMS=(
+    "VpcId=$VPC_ID"
+    "PrivateSubnets=$PRIVATE_SUBNETS_CF"
+    "PublicSubnets=$PUBLIC_SUBNETS_CF"
+    "SSLCertificateArn=$SSL_CERT_ARN"
+)
+
+if [ "$BATCH_MODE" == "true" ]; then
+    CONTROLLER_PARAMS+=("BatchModeEnabled=true")
+fi
+
 aws cloudformation deploy \
     --stack-name "$STACK_NAME-controller" \
     --template-file jenkins-controller-service.yaml \
-    --parameter-overrides \
-        VpcId=$VPC_ID \
-        PrivateSubnets=$PRIVATE_SUBNETS_CF \
-        PublicSubnets=$PUBLIC_SUBNETS_CF \
-        SSLCertificateArn=$SSL_CERT_ARN \
+    --parameter-overrides "${CONTROLLER_PARAMS[@]}" \
     --capabilities CAPABILITY_IAM \
     --region $REGION
 
@@ -160,16 +228,32 @@ JENKINS_URL=$(aws cloudformation describe-stacks \
 
 # Deploy Jenkins agents
 echo "Deploying Jenkins agent cluster..."
+AGENT_PARAMS=(
+    "VpcId=$VPC_ID"
+    "PrivateSubnets=$PRIVATE_SUBNETS_CF"
+    "JenkinsControllerSecurityGroupId=$JENKINS_CONTROLLER_SG"
+    "JenkinsAgentSecurityGroupId=$JENKINS_AGENT_SG"
+    "MinAgentCapacity=$MIN_AGENTS"
+    "MaxAgentCapacity=$MAX_AGENTS"
+    "SpotWeight=$SPOT_WEIGHT"
+    "OnDemandWeight=$ON_DEMAND_WEIGHT"
+)
+
+if [ "$BATCH_MODE" == "true" ]; then
+    AGENT_PARAMS+=("BatchModeEnabled=true")
+fi
+
+if [ "$SCHEDULE_SCALE" == "true" ]; then
+    AGENT_PARAMS+=(
+        "ScheduledScalingEnabled=true"
+        "TestSchedule=$TEST_SCHEDULE"
+    )
+fi
+
 aws cloudformation deploy \
     --stack-name "$STACK_NAME-agents" \
     --template-file jenkins-agent-cluster.yaml \
-    --parameter-overrides \
-        VpcId=$VPC_ID \
-        PrivateSubnets=$PRIVATE_SUBNETS_CF \
-        JenkinsControllerSecurityGroupId=$JENKINS_CONTROLLER_SG \
-        JenkinsAgentSecurityGroupId=$JENKINS_AGENT_SG \
-        MinAgentCapacity=$MIN_AGENTS \
-        MaxAgentCapacity=$MAX_AGENTS \
+    --parameter-overrides "${AGENT_PARAMS[@]}" \
     --capabilities CAPABILITY_IAM \
     --region $REGION
 
@@ -186,5 +270,12 @@ echo ""
 echo "To retrieve the initial admin password, run:"
 echo "aws logs filter-log-events --log-group-name /ecs/jenkins-controller --filter-pattern \"initialAdminPassword\" --region $REGION"
 echo ""
+if [ "$BATCH_MODE" == "true" ]; then
+    echo "Batch mode configuration recommendations:"
+    echo "- See COST-OPTIMIZATION-FOR-BATCH-WORKLOADS.md for additional configuration options"
+    echo "- Install the 'Prune Workspaces' plugin for efficient storage management"
+    echo "- Configure cost allocation tags to track test run expenses"
+    echo ""
+fi
 echo "For detailed configuration instructions, refer to the JENKINS-ECS-DEPLOYMENT-GUIDE.md file"
 echo "========================================" 

@@ -34,9 +34,23 @@ The architecture's ability to handle 1000 concurrent jobs is supported by:
 
 For detailed capacity analysis and evidence, see the "Evidence Supporting 1000 Concurrent Jobs" section in the deployment guide.
 
+## Batch Workload Optimization
+
+**New**: For organizations running large-scale tests periodically (e.g., 10 times per week) with minimal usage during other periods, see `COST-OPTIMIZATION-FOR-BATCH-WORKLOADS.md` for:
+
+- Cost estimates for periodic high-scale testing
+- Optimized scaling strategies for batch workloads
+- Architecture adjustments for cost efficiency
+- Implementation recommendations for scheduled capacity
+
+**Cost Analysis Update**: For short-duration test runs (15 minutes), the monthly cost drops dramatically to approximately **$485** (or **$374** with optimizations). See the cost document for the detailed breakdown.
+
+This optimized approach can reduce costs by up to 87% compared to longer test runs while maintaining performance during test execution.
+
 ## Files in This Repository
 
 - `JENKINS-ECS-DEPLOYMENT-GUIDE.md`: Comprehensive guide with best practices
+- `COST-OPTIMIZATION-FOR-BATCH-WORKLOADS.md`: Guidance for periodic high-scale testing
 - `jenkins-controller-service.yaml`: CloudFormation template for Jenkins controller
 - `jenkins-agent-cluster.yaml`: CloudFormation template for agent clusters
 - `deploy.sh`: Deployment script to simplify installation
