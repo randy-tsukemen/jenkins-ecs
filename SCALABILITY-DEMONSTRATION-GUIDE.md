@@ -404,6 +404,80 @@ To validate the full 1000-job capacity:
 
 4. **Controller Scaling**: For 1000-job tests, consider temporarily scaling up the controller resources (8 vCPU, 32GB+)
 
+## Network Considerations
+
+### IP Address Management
+
+When scaling ECS tasks, it's crucial to consider IP address consumption:
+
+1. **IP Address Requirements**:
+
+   - Each Fargate task requires one private IPv4 address
+   - IP addresses are consumed from the subnet where the task is launched
+   - Tasks remain in `PENDING` state if no IP addresses are available
+
+2. **Subnet Planning**:
+
+   - For 1000 concurrent jobs, ensure your subnets have sufficient IP space
+   - Recommended minimum CIDR size: /20 (4,096 addresses) per subnet
+   - Example subnet allocation:
+     ```
+     private-subnet-1: 10.0.0.0/20 (4,096 IPs)
+     private-subnet-2: 10.0.16.0/20 (4,096 IPs)
+     private-subnet-3: 10.0.32.0/20 (4,096 IPs)
+     ```
+
+3. **IP Address Monitoring**:
+
+   - Monitor available IP addresses in your subnets during scaling tests
+   - Add the following CloudWatch metrics to your dashboard:
+     - `AWS/VPC - AvailableIpAddresses`
+     - `AWS/ECS - PendingTaskCount` (may indicate IP exhaustion)
+
+4. **Best Practices**:
+   - Distribute tasks across multiple Availability Zones
+   - Consider enabling IPv6 for dual-stack support
+   - Implement proper subnet cleanup for terminated tasks
+   - Monitor ENI release times during scale-down
+
+### Monitoring IP Address Usage
+
+Add these commands to your monitoring script to track IP address availability:
+
+```bash
+# Add to ecs-monitor.sh
+echo "Checking available IP addresses in subnets..."
+for subnet in $PRIVATE_SUBNET_IDS; do
+  available_ips=$(aws ec2 describe-subnets \
+    --subnet-ids $subnet \
+    --query 'Subnets[0].AvailableIpAddressCount' \
+    --output text)
+  echo "Subnet $subnet: $available_ips available IPs"
+done
+```
+
+### Troubleshooting IP Exhaustion
+
+If tasks remain in `PENDING` state due to IP exhaustion:
+
+1. Check available IPs:
+
+```bash
+aws ec2 describe-subnets \
+  --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query 'Subnets[*].[SubnetId,AvailableIpAddressCount]'
+```
+
+2. Verify ENI cleanup:
+
+```bash
+aws ec2 describe-network-interfaces \
+  --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query 'NetworkInterfaces[*].[NetworkInterfaceId,Description]'
+```
+
+3. Consider expanding subnet CIDR ranges or adding new subnets if needed
+
 ## Conclusion
 
 This demonstration validates that the Jenkins on AWS ECS architecture can effectively scale to handle large batches of concurrent jobs. By successfully scaling to handle 100 concurrent jobs, the architecture demonstrates the core auto-scaling mechanisms that enable scaling to the full 1000-job capacity.

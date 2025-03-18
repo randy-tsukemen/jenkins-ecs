@@ -293,6 +293,59 @@
       "properties": {
         "markdown": "# Jenkins ECS Scaling Demonstration Dashboard\n\nThis dashboard provides real-time metrics for the Jenkins on AWS ECS scaling demonstration. Use this to observe how the ECS cluster scales in response to Jenkins job queue depth.\n\n**Key Metrics to Watch:**\n* ECS Running Tasks: Shows the number of agent tasks scaling up and down\n* ECS Pending Tasks: Indicates tasks waiting to be placed\n* CPU/Memory Utilization: Shows resource usage across agents\n* Total Running Tasks: Aggregate view of all running agent tasks"
       }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 27,
+      "width": 24,
+      "height": 6,
+      "properties": {
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "AWS/VPC",
+            "AvailableIpAddresses",
+            "SubnetId",
+            "${PRIVATE_SUBNET_1}",
+            { "label": "Private Subnet 1" }
+          ],
+          [
+            ".",
+            ".",
+            ".",
+            "${PRIVATE_SUBNET_2}",
+            { "label": "Private Subnet 2" }
+          ],
+          [
+            ".",
+            ".",
+            ".",
+            "${PRIVATE_SUBNET_3}",
+            { "label": "Private Subnet 3" }
+          ]
+        ],
+        "region": "us-east-1",
+        "title": "Available IP Addresses per Subnet",
+        "period": 60,
+        "stat": "Minimum",
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 33,
+      "width": 24,
+      "height": 3,
+      "properties": {
+        "markdown": "## IP Address Monitoring\n\nThis section shows available IP addresses in each subnet. Monitor these metrics during scaling tests to ensure sufficient IP capacity. If available IPs approach zero, tasks may fail to launch.\n\n**Warning Thresholds:**\n* Critical: Less than 100 available IPs\n* Warning: Less than 500 available IPs"
+      }
     }
   ]
 }
