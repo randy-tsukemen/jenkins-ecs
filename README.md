@@ -64,6 +64,7 @@ This optimized approach can reduce costs by up to 87% compared to longer test ru
 - `COST-OPTIMIZATION-FOR-BATCH-WORKLOADS.md`: Guidance for periodic high-scale testing
 - `SCALABILITY-DEMONSTRATION-GUIDE.md`: Step-by-step guide for testing scalability
 - `scaling-dashboard.json`: CloudWatch dashboard for monitoring scaling
+- `VPC-CONNECTIVITY-AND-EC2-CONTROLLER.md`: Guide for VPC connectivity options and EC2-based Jenkins controller
 - `jenkins-controller-service.yaml`: CloudFormation template for Jenkins controller
 - `jenkins-agent-cluster.yaml`: CloudFormation template for agent clusters
 - `deploy.sh`: Deployment script to simplify installation
