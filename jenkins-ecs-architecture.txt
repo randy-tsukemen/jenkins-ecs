@@ -1,0 +1,55 @@
+VPC-A (Limited to 30 IP addresses)
++----------------------------------------------------------------------+
+|                                                                      |
+|  +------------+        +----------------+                            |
+|  |            |        |                |                            |
+|  | GitLab     |<------>| Jenkins Master |                            |
+|  | Server     |        | (EC2)          |                            |
+|  |            |        |                |                            |
+|  +------------+        +----------------+                            |
+|                                |                                     |
+|                                | Amazon ECS API                      |
+|                                V                                     |
+|  +------------------------------------------------------------------+|
+|  |                                                                  ||
+|  |                     ECS Cluster (EC2 mode)                       ||
+|  |                                                                  ||
+|  |  +-----------------------------------------------+               ||
+|  |  | EC2 Instance #1 (1 IP address)                |               ||
+|  |  |                                               |               ||
+|  |  |  +-----------+  +-----------+  +-----------+  |               ||
+|  |  |  | Container |  | Container |  | Container |  |               ||
+|  |  |  | Jenkins   |  | Jenkins   |  | Jenkins   |  |               ||
+|  |  |  | Agent     |  | Agent     |  | Agent     |  |               ||
+|  |  |  +-----------+  +-----------+  +-----------+  |               ||
+|  |  |        (Bridge Networking Mode - Shared IP)   |               ||
+|  |  +-----------------------------------------------+               ||
+|  |                                                                  ||
+|  |  +-----------------------------------------------+               ||
+|  |  | EC2 Instance #2 (1 IP address)                |               ||
+|  |  |                                               |               ||
+|  |  |  +-----------+  +-----------+  +-----------+  |               ||
+|  |  |  | Container |  | Container |  | Container |  |               ||
+|  |  |  | Jenkins   |  | Jenkins   |  | Jenkins   |  |               ||
+|  |  |  | Agent     |  | Agent     |  | Agent     |  |               ||
+|  |  |  +-----------+  +-----------+  +-----------+  |               ||
+|  |  |        (Bridge Networking Mode - Shared IP)   |               ||
+|  |  +-----------------------------------------------+               ||
+|  |                                                                  ||
+|  |                        Auto Scaling Group                        ||
+|  |                      (5-10 EC2 instances)                        ||
+|  |                                                                  ||
+|  +------------------------------------------------------------------+|
+|                                                                      |
+|  +------------+        +------------+        +------------+          |
+|  | VPC        |        | ECR        |        | CloudWatch |          |
+|  | Endpoint   |        | Endpoint   |        | Endpoint   |          |
+|  +------------+        +------------+        +------------+          |
+|                                                                      |
++----------------------------------------------------------------------+
+
+Key benefits:
+1. Multiple containers share a single EC2 instance's IP address (bridge networking)
+2. Can run 100+ containers using only 5-10 EC2 instances (5-10 IP addresses)
+3. No public internet connectivity required
+4. Complete isolation between job environments 

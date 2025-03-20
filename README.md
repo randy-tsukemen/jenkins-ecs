@@ -1,162 +1,105 @@
-# Jenkins on AWS ECS - High-Scale Deployment
+# Jenkins ECS Solution
 
-This project provides CloudFormation templates and deployment scripts for running a Jenkins CI/CD platform on AWS ECS that can handle 1000 concurrent jobs. The architecture follows AWS best practices for scalability, availability, and security.
+This project provides a scalable Jenkins solution using Amazon ECS with EC2 instances and bridge networking to run Jenkins agents in containers, enabling 100+ concurrent jobs while conserving IP addresses in a private VPC.
 
-## Architecture Overview
+## Problem Statement
 
-The solution consists of:
+1. VPC-A hosts GitLab server and Jenkins on EC2 using IPv4 communication
+2. VPC-A is limited to only 30 IP addresses
+3. Jenkins needs to scale to run 100 concurrent jobs
+4. All communication must remain within the company's internal network
 
-- **Jenkins Controller**: Running on ECS Fargate with EFS for persistent storage
-- **Jenkins Agents**: Dynamic ECS-based agents with auto-scaling
-- **Networking**: Multi-AZ deployment across public and private subnets
-- **Security**: Least privilege IAM roles and security groups
+## IP Address Constraint and Solution
 
-Refer to the `JENKINS-ECS-DEPLOYMENT-GUIDE.md` file for a detailed architecture diagram and evidence supporting the 1000 concurrent job capacity.
+**Key Challenge**: Initially, we considered using ECS Fargate, but Fargate tasks require awsvpc networking mode where each task needs its own IP address. With only 30 IPs available, this approach wouldn't scale to 100 jobs.
 
-## Features
+**Solution**: Use ECS on EC2 with bridge networking mode, where multiple containers can share a single EC2 instance's IP address, allowing us to run 100+ containers with only 5-10 IP addresses.
 
-- **Scale to 1000 Concurrent Jobs**: Auto-scaling ECS clusters to handle high build volumes
-- **Cost Optimization**: Uses Fargate Spot for up to 70% of compute workloads
-- **High Availability**: Multi-AZ deployment with EFS for persistent storage
-- **Security**: TLS termination, private subnets, and least privilege IAM policies
-- **Operational Excellence**: CloudWatch monitoring, alarms, and auto-scaling
-- **Infrastructure as Code**: Complete CloudFormation templates
+## Solution Overview
 
-## Scalability Evidence
+The solution uses AWS ECS with EC2 instances using bridge networking to run Jenkins agents as Docker containers:
 
-The architecture's ability to handle 1000 concurrent jobs is supported by:
+- **Jenkins Master**: EC2 instance in VPC-A configured with the ECS plugin
+- **ECS Cluster**: EC2-based cluster with Auto Scaling Group (5-10 instances)
+- **Container Networking**: Bridge mode allowing 10-20 containers per EC2 instance
+- **Container Registry**: Private ECR repository for Jenkins agent images
+- **VPC Endpoints**: For private AWS service access without internet connectivity
 
-- **Distributed Agent Architecture**: Workloads distributed across different agent sizes (small/medium/large)
-- **AWS Service Limits**: ECS supports up to 5,000 tasks per cluster, well beyond our requirements
-- **Performance Optimizations**: Controller tuning, efficient resource allocation, and auto-scaling
-- **Benchmark Testing**: Based on AWS performance data for similar workloads
-- **Industry Examples**: Similar architectures used by large enterprises
+## Architecture Benefits
 
-For detailed capacity analysis and evidence, see the "Evidence Supporting 1000 Concurrent Jobs" section in the deployment guide.
+1. **IP Conservation**: Multiple containers share a single EC2 instance's IP address
+2. **Scalability**: Easily scales to 100+ concurrent jobs with only 5-10 IP addresses
+3. **Isolation**: Each job runs in its own container
+4. **Security**: No public internet access required
+5. **Cost Efficiency**: Efficiently utilize EC2 instances with multiple containers
 
-## Scalability Demonstration
+## Project Structure
 
-For teams who want to validate the scaling capabilities of this architecture, we've provided a detailed demonstration guide that walks through:
-
-- Setting up test jobs to simulate concurrent workloads
-- Observing real-time auto-scaling of ECS agents
-- Measuring scale-up and scale-down performance
-- Extrapolating results to 1000-job capacity
-
-Follow the instructions in `SCALABILITY-DEMONSTRATION-GUIDE.md` to run a controlled test with 100 concurrent jobs and observe the system's scaling behavior. The guide includes monitoring tools, test job scripts, and analysis methods.
-
-## Batch Workload Optimization
-
-**New**: For organizations running large-scale tests periodically (e.g., 10 times per week) with minimal usage during other periods, see `COST-OPTIMIZATION-FOR-BATCH-WORKLOADS.md` for:
-
-- Cost estimates for periodic high-scale testing
-- Optimized scaling strategies for batch workloads
-- Architecture adjustments for cost efficiency
-- Implementation recommendations for scheduled capacity
-
-**Cost Analysis Update**: For short-duration test runs (15 minutes), the monthly cost drops dramatically to approximately **$485** (or **$374** with optimizations). See the cost document for the detailed breakdown.
-
-This optimized approach can reduce costs by up to 87% compared to longer test runs while maintaining performance during test execution.
-
-## Files in This Repository
-
-- `JENKINS-ECS-DEPLOYMENT-GUIDE.md`: Comprehensive guide with best practices
-- `COST-OPTIMIZATION-FOR-BATCH-WORKLOADS.md`: Guidance for periodic high-scale testing
-- `SCALABILITY-DEMONSTRATION-GUIDE.md`: Step-by-step guide for testing scalability
-- `scaling-dashboard.json`: CloudWatch dashboard for monitoring scaling
-- `VPC-CONNECTIVITY-AND-EC2-CONTROLLER.md`: Guide for VPC connectivity options and EC2-based Jenkins controller
-- `jenkins-controller-service.yaml`: CloudFormation template for Jenkins controller
-- `jenkins-agent-cluster.yaml`: CloudFormation template for agent clusters
-- `deploy.sh`: Deployment script to simplify installation
-- `README.md`: This file
+- `Dockerfile`: Defines the Jenkins agent container image
+- `entrypoint.sh`: Container startup script
+- `jenkins-ecs-config.tf`: Terraform configuration for ECS resources
+- `vpc-endpoints.tf`: Terraform configuration for VPC endpoints
+- `variables.tf`: Terraform variables
+- `jenkins-ecs-plugin-config.xml`: Jenkins ECS plugin configuration
+- `configure-jenkins-ecs.sh`: Script to install and configure Jenkins plugins
+- `jenkins-ecs-architecture.md`: Detailed architecture documentation
 
 ## Prerequisites
 
-Before deployment, you need:
+- Existing VPC with GitLab and Jenkins Master
+- AWS CLI installed and configured
+- Terraform installed
+- Docker installed
+- Jenkins Admin access
 
-1. AWS CLI installed and configured
-2. An existing VPC with public and private subnets
-3. An SSL certificate in AWS Certificate Manager
-4. Permissions to create resources (IAM, ECS, EFS, etc.)
+## Setup Instructions
 
-## Quick Start
+### 1. Configure Terraform Variables
 
-1. Clone this repository:
+Edit `variables.tf` with your specific values:
 
-```
-git clone https://github.com/yourusername/jenkins-ecs.git
-cd jenkins-ecs
-```
+- AWS region
+- VPC ID
+- Subnet IDs
+- ECS AMI ID (Amazon ECS-optimized AMI for your region)
+- CIDR blocks
 
-2. Make the deployment script executable:
+### 2. Deploy Infrastructure with Terraform
 
-```
-chmod +x deploy.sh
-```
-
-3. Run the deployment script with your parameters:
-
-```
-./deploy.sh \
-  --vpc-id vpc-12345678 \
-  --public-subnets subnet-a,subnet-b,subnet-c \
-  --private-subnets subnet-d,subnet-e,subnet-f \
-  --certificate-arn arn:aws:acm:region:account:certificate/123456
+```bash
+terraform init
+terraform plan
+terraform apply
 ```
 
-4. Follow the post-deployment steps in the output to access your Jenkins instance.
+### 3. Build and Push Jenkins Agent Docker Image
 
-## Configuration
+```bash
+aws ecr get-login-password --region your-region | docker login --username AWS --password-stdin account-id.dkr.ecr.your-region.amazonaws.com
+docker build -t jenkins-agent .
+docker tag jenkins-agent:latest account-id.dkr.ecr.your-region.amazonaws.com/jenkins-agent:latest
+docker push account-id.dkr.ecr.your-region.amazonaws.com/jenkins-agent:latest
+```
 
-After deployment, you'll need to:
+### 4. Configure Jenkins
 
-1. Set up Jenkins with the initial admin password
-2. Install the ECS plugin and configure agent templates
-3. Configure job queues and labels for workload distribution
+1. Install the Amazon ECS plugin
+2. Configure Jenkins ECS cloud with bridge network mode (use the provided script)
+3. Update Jenkinsfile to use ECS agents with bridge networking
 
-Refer to `JENKINS-ECS-DEPLOYMENT-GUIDE.md` for detailed configuration instructions.
+## Usage
 
-## Scaling Considerations
+When Jenkins jobs are triggered, they will automatically use the ECS-based agents, with the ECS cluster's Auto Scaling Group adding EC2 instances as needed to support up to 100 concurrent jobs.
 
-This solution is designed to scale to 1000 concurrent jobs by:
+## Maintenance
 
-- Distributing workloads across differently sized agents
-- Using auto-scaling based on queue depth and CPU utilization
-- Implementing priority-based scheduling
-- Optimizing job execution with parallel stages
+- Update Docker images regularly with security patches
+- Monitor ECS service for performance and scaling events
+- Review Jenkins logs for any connectivity issues
+- Monitor EC2 instance utilization and adjust instance types if needed
 
-## Cost Optimization
+## Additional Resources
 
-To optimize costs:
-
-- Leverage Fargate Spot for non-critical workloads
-- Schedule scaling to reduce capacity during off-hours
-- Use workspace cleanup to minimize EFS storage costs
-- Implement job timeout strategies to prevent runaway costs
-
-## Security
-
-The deployment implements security best practices:
-
-- TLS for all external traffic
-- Private subnets for Jenkins workloads
-- Least privilege IAM roles
-- Security groups with minimal required access
-- Secrets management for credentials
-
-## Monitoring
-
-The solution includes:
-
-- CloudWatch dashboards for ECS services
-- Custom metrics for Jenkins queue depth
-- Automated alerts for resource utilization
-- Log collection and analysis
-
-## Support
-
-For issues, questions, or contributions, please open an issue in this repository.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+- [Jenkins ECS Plugin Documentation](https://plugins.jenkins.io/amazon-ecs/)
+- [AWS ECS Documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_instances.html)
+- [AWS PrivateLink Documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/vpc-endpoints.html)
